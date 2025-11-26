@@ -7,7 +7,7 @@ namespace EM.Repository.Banco
     {
         private static string connectionString =
             "User=SYSDBA;Password=masterkey;" +
-            "Database=C:\\WorkRodrigo\\Projeto_Mod\\ProjetoGerenciamentoEscolar\\BANCO.FDB;" +
+            "Database=C:\\WorkRodrigo\\Projeto-Pessoal\\BANCO.FDB;" +
             "DataSource=localhost;Port=3055;Dialect=3;Charset=UTF8;ServerType=0;";
 
         public static void Configure(string conn)

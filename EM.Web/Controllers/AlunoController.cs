@@ -26,7 +26,7 @@ namespace EM.Web.Controllers
                 {
                     Matricula = a.Matricula,
                     Nome = a.Nome,
-                    CPF = a.CPF,
+                    CPF = FormatarCPF(a.CPF),
                     Nascimento = a.Nascimento,
                     Sexo = a.Sexo,
                     CidadeCodigo = a.CidadeCodigo,
@@ -58,25 +58,40 @@ namespace EM.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-
                 if (!string.IsNullOrWhiteSpace(model.CPF))
                 {
-                    if (!Validations.ValidarCPF(model.CPF))
+                    string cpfLimpo = LimparCPF(model.CPF);
+
+                    if (!cpfLimpo.All(char.IsDigit))
+                    {
+                        ModelState.AddModelError("CPF", "CPF deve conter apenas números");
+                        CarregarViewBags();
+                        return View(model);
+                    }
+
+                    if (cpfLimpo.Length != 11)
+                    {
+                        ModelState.AddModelError("CPF", "CPF deve conter exatamente 11 dígitos");
+                        CarregarViewBags();
+                        return View(model);
+                    }
+
+                    if (!Validations.ValidarCPF(cpfLimpo))
                     {
                         ModelState.AddModelError("CPF", "CPF inválido");
                         CarregarViewBags();
                         return View(model);
                     }
 
-
-                    if (_repositorioAluno.CPFExiste(model.CPF))
+                    if (_repositorioAluno.CPFExiste(cpfLimpo))
                     {
                         ModelState.AddModelError("CPF", "CPF já cadastrado");
                         CarregarViewBags();
                         return View(model);
                     }
-                }
 
+                    model.CPF = cpfLimpo;
+                }
 
                 if (!Validations.ValidarNome(model.Nome))
                 {
@@ -88,7 +103,7 @@ namespace EM.Web.Controllers
                 var aluno = new Aluno
                 {
                     Nome = model.Nome?.Trim() ?? string.Empty,
-                    CPF = model.CPF?.Replace(".", "").Replace("-", "") ?? string.Empty,
+                    CPF = model.CPF ?? string.Empty,
                     Nascimento = model.Nascimento,
                     Sexo = model.Sexo,
                     CidadeCodigo = model.CidadeCodigo
@@ -111,7 +126,6 @@ namespace EM.Web.Controllers
             CarregarViewBags();
             return View(model);
         }
-
 
 
         private IEnumerable<Aluno> BuscarPorCidades(string nomeCidade)
@@ -154,7 +168,7 @@ namespace EM.Web.Controllers
             {
                 Matricula = aluno.Matricula,
                 Nome = aluno.Nome,
-                CPF = aluno.CPF,
+                CPF = FormatarCPF(aluno.CPF),
                 Nascimento = aluno.Nascimento,
                 Sexo = aluno.Sexo,
                 CidadeCodigo = aluno.CidadeCodigo
@@ -179,20 +193,37 @@ namespace EM.Web.Controllers
             {
                 if (!string.IsNullOrWhiteSpace(model.CPF))
                 {
-                    if (!Validations.ValidarCPF(model.CPF))
+                    string cpfLimpo = LimparCPF(model.CPF);
+
+                    if (!cpfLimpo.All(char.IsDigit))
+                    {
+                        ModelState.AddModelError("CPF", "CPF deve conter apenas números");
+                        CarregarViewBags();
+                        return View(model);
+                    }
+
+                    if (cpfLimpo.Length != 11)
+                    {
+                        ModelState.AddModelError("CPF", "CPF deve conter exatamente 11 dígitos");
+                        CarregarViewBags();
+                        return View(model);
+                    }
+
+                    if (!Validations.ValidarCPF(cpfLimpo))
                     {
                         ModelState.AddModelError("CPF", "CPF inválido");
                         CarregarViewBags();
                         return View(model);
                     }
 
-
-                    if (_repositorioAluno.CPFExiste(model.CPF, model.Matricula))
+                    if (_repositorioAluno.CPFExiste(cpfLimpo, model.Matricula))
                     {
                         ModelState.AddModelError("CPF", "CPF já cadastrado para outro aluno");
                         CarregarViewBags();
                         return View(model);
                     }
+
+                    model.CPF = cpfLimpo;
                 }
 
                 if (!Validations.ValidarNome(model.Nome))
@@ -206,7 +237,7 @@ namespace EM.Web.Controllers
                 {
                     Matricula = model.Matricula,
                     Nome = model.Nome?.Trim() ?? string.Empty,
-                    CPF = model.CPF?.Replace(".", "").Replace("-", "") ?? string.Empty,
+                    CPF = model.CPF ?? string.Empty,
                     Nascimento = model.Nascimento,
                     Sexo = model.Sexo,
                     CidadeCodigo = model.CidadeCodigo
@@ -240,7 +271,6 @@ namespace EM.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-
             if (aluno.CidadeCodigo.HasValue)
             {
                 var cidade = _repositorioCidade.GetByCodigo(aluno.CidadeCodigo.Value);
@@ -255,7 +285,7 @@ namespace EM.Web.Controllers
             {
                 Matricula = aluno.Matricula,
                 Nome = aluno.Nome,
-                CPF = aluno.CPF,
+                CPF = FormatarCPF(aluno.CPF),
                 Nascimento = aluno.Nascimento,
                 Sexo = aluno.Sexo,
                 CidadeCodigo = aluno.CidadeCodigo,
@@ -305,7 +335,7 @@ namespace EM.Web.Controllers
                     "matricula" when int.TryParse(searchValue, out int matricula) =>
                         new[] { _repositorioAluno.GetByMatricula(matricula) }.Where(a => a != null),
                     "cpf" =>
-                        new[] { _repositorioAluno.GetByCPF(searchValue) }.Where(a => a != null),
+                        new[] { _repositorioAluno.GetByCPF(LimparCPF(searchValue)) }.Where(a => a != null),
                     "sexo" when Enum.TryParse<EnumeradorSexo>(searchValue, true, out var sexo) =>
                         _repositorioAluno.GetBySexo(sexo),
                     _ => _repositorioAluno.GetByConteudoNoNome(searchValue)
@@ -314,16 +344,16 @@ namespace EM.Web.Controllers
                 var model = alunos
                     .Select(PreencherCidade)
                     .Select(a => new AlunoModel
-                {
-                    Matricula = a.Matricula,
-                    Nome = a.Nome,
-                    CPF = a.CPF,
-                    Nascimento = a.Nascimento,
-                    Sexo = a.Sexo,
-                    CidadeCodigo = a.CidadeCodigo,
-                    CidadeNome = a.CidadeNome,
-                    UF = a.UF
-                }).ToList();
+                    {
+                        Matricula = a.Matricula,
+                        Nome = a.Nome,
+                        CPF = FormatarCPF(a.CPF),
+                        Nascimento = a.Nascimento,
+                        Sexo = a.Sexo,
+                        CidadeCodigo = a.CidadeCodigo,
+                        CidadeNome = a.CidadeNome,
+                        UF = a.UF
+                    }).ToList();
 
                 ViewBag.SearchTypes = new[] { "nome", "matricula", "cpf", "sexo" };
                 ViewBag.SearchType = searchType;
@@ -346,6 +376,27 @@ namespace EM.Web.Controllers
             ViewBag.Sexos = Enum.GetValues(typeof(EnumeradorSexo))
                 .Cast<EnumeradorSexo>()
                 .ToList();
+        }
+
+        private string LimparCPF(string cpf)
+        {
+            if (string.IsNullOrWhiteSpace(cpf))
+                return string.Empty;
+
+            return cpf.Replace(".", "").Replace("-", "").Trim();
+        }
+
+        private string FormatarCPF(string cpf)
+        {
+            if (string.IsNullOrWhiteSpace(cpf))
+                return string.Empty;
+
+            string cpfLimpo = LimparCPF(cpf);
+
+            if (cpfLimpo.Length != 11)
+                return cpf;
+
+            return $"{cpfLimpo.Substring(0, 3)}.{cpfLimpo.Substring(3, 3)}.{cpfLimpo.Substring(6, 3)}-{cpfLimpo.Substring(9, 2)}";
         }
     }
 }

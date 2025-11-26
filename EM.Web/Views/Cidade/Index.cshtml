@@ -1,0 +1,220 @@
+@model IEnumerable<Em.Web.Models.CidadeModel>
+
+@{
+    ViewData["Title"] = "Gerenciar Cidades";
+}
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="display-6 text-primary fw-bold">
+            <i class="bi bi-geo-alt-fill me-2"></i>
+            @ViewData["Title"]
+        </h1>
+        <p class="text-muted mb-0">Gerencie as cidades cadastradas no sistema</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>
+            Nova Cidade
+        </a>
+    </div>
+</div>
+
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="searchType" class="form-label">Tipo de Busca</label>
+                <select id="searchType" class="form-select">
+                    <option value="nome">Nome</option>
+                    <option value="codigo">Código</option>
+                    <option value="uf">UF</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="searchInput" class="form-label">Buscar</label>
+                <input type="text" id="searchInput" class="form-control" placeholder="Digite o termo de busca...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-primary w-100" onclick="filtrarTabela()">
+                    <i class="bi bi-search me-1"></i>
+                    Buscar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-semibold">Lista de Cidades</h5>
+                <span class="badge bg-secondary rounded-pill">@Model.Count() cidade(s)</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="cidadesTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0 fw-semibold text-uppercase text-muted small">Código</th>
+                                <th class="border-0 fw-semibold text-uppercase text-muted small">Nome</th>
+                                <th class="border-0 fw-semibold text-uppercase text-muted small">UF</th>
+                                <th class="border-0 fw-semibold text-uppercase text-muted small text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                foreach (var cidade in Model)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold text-primary">
+                                            @cidade.Codigo.ToString("D3")
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">@cidade.Nome</div>
+                                            <small class="text-muted">Cidade</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                @cidade.UF
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a asp-action="Edit" asp-route-id="@cidade.Codigo" class="btn btn-outline-primary btn-sm action-btn" title="Editar cidade">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-danger btn-sm action-btn" onclick="confirmarExclusao('@cidade.Codigo', '@cidade.Nome')" title="Excluir cidade">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                                            <h6 class="mb-1">Nenhuma cidade cadastrada</h6>
+                                            <p class="mb-3">Comece adicionando uma nova cidade ao sistema</p>
+                                            <a asp-action="Create" class="btn btn-primary">
+                                                <i class="bi bi-plus-circle me-2"></i>
+                                                Adicionar Cidade
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model != null && Model.Any())
+            {
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            Mostrando @Model.Count() cidade(s)
+                        </small>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="confirmDeleteModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a cidade <strong id="cidadeNome"></strong>?</p>
+                <p class="text-muted mb-0">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Cancelar
+                </button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>
+                        Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmarExclusao(codigo, nome) {
+            document.getElementById('cidadeNome').textContent = nome;
+            document.getElementById('deleteForm').setAttribute('action', '/Cidade/Delete/' + codigo);
+            var modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            modal.show();
+        }
+
+        function filtrarTabela() {
+            var tipoBusca = document.getElementById('searchType').value;
+            var termoBusca = document.getElementById('searchInput').value.toLowerCase();
+            var tabela = document.getElementById('cidadesTable');
+            var linhas = tabela.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+            for (var i = 0; i < linhas.length; i++) {
+                var colunas = linhas[i].getElementsByTagName('td');
+                var deveMostrar = false;
+
+                if (termoBusca === '') {
+                    deveMostrar = true;
+                } else {
+                    if (tipoBusca === 'nome' && colunas[1]) {
+                        var nome = colunas[1].textContent.toLowerCase();
+                        deveMostrar = nome.includes(termoBusca);
+                    } else if (tipoBusca === 'codigo' && colunas[0]) {
+                        var codigo = colunas[0].textContent.toLowerCase();
+                        deveMostrar = codigo.includes(termoBusca);
+                    } else if (tipoBusca === 'uf' && colunas[2]) {
+                        var uf = colunas[2].textContent.toLowerCase();
+                        deveMostrar = uf.includes(termoBusca);
+                    }
+                }
+
+                linhas[i].style.display = deveMostrar ? '' : 'none';
+            }
+        }
+
+
+
+        // Busca em tempo real
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                filtrarTabela();
+            }
+        });
+
+        // Auto-dismiss alerts
+        setTimeout(function () {
+            document.querySelectorAll('.alert').forEach(function (el) {
+                el.style.transition = 'opacity 0.5s';
+                el.style.opacity = '0';
+                setTimeout(function () { el.remove(); }, 500);
+            });
+        }, 5000);
+    </script>
+}

@@ -39,4 +39,5 @@ packages/
 NuGet.exe
 
 # Publish
-publish/
+publish/# Configurações do VS Code
+.vscode/

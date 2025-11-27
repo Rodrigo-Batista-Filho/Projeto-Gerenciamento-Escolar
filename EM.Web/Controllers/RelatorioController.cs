@@ -1,23 +1,15 @@
 using EM.Domain;
-using EM.Repository;
+using EM.Repository.Interfaces;
 using EM.Web.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EM.Web.Controllers
 {
-    public class RelatorioController : Controller
+    public class RelatorioController(IRelatorioService relatorioService, IRepositorioAluno repoAluno, IRepositorioCidade repoCidade) : Controller
     {
-        private readonly IRelatorioService _relatorioService;
-        private readonly RepositorioAluno _repoAluno;
-        private readonly RepositorioCidade _repoCidade;
-
-        public RelatorioController(IRelatorioService relatorioService, RepositorioAluno repoAluno, RepositorioCidade repoCidade)
-        {
-            _relatorioService = relatorioService;
-            _repoAluno = repoAluno;
-            _repoCidade = repoCidade;
-        }
-
+        private readonly IRelatorioService _relatorioService = relatorioService;
+        private readonly IRepositorioAluno _repoAluno = repoAluno;
+        private readonly IRepositorioCidade _repoCidade = repoCidade;
 
         [HttpGet]
         public IActionResult AlunosPDF(string? searchType, string? searchValue)
@@ -52,13 +44,21 @@ namespace EM.Web.Controllers
 
             var listaAlunos = alunos.ToList();
             var bytes = _relatorioService.GerarRelatorioAlunosPDF(listaAlunos);
-            Response.Headers["Content-Disposition"] = "inline; filename=Relatorio_Alunos.pdf";
+            Response.Headers.ContentDisposition = "inline; filename=Relatorio_Alunos.pdf";
             return File(bytes, "application/pdf");
         }
 
         private IEnumerable<Aluno> BuscarPorCidades(string valorBusca)
         {
-            return _repoAluno.GetByConteudoNoNome(valorBusca);
+            var cidades = _repoCidade.GetByNome(valorBusca)?.ToList() ?? new List<Cidade>();
+            if (cidades.Count == 0) return Enumerable.Empty<Aluno>();
+
+            var alunos = new List<Aluno>();
+            foreach (var cidade in cidades)
+            {
+                alunos.AddRange(_repoAluno.GetByCidade(cidade.Codigo));
+            }
+            return alunos;
         }
 
         private Aluno PreencherCidade(Aluno? aluno)

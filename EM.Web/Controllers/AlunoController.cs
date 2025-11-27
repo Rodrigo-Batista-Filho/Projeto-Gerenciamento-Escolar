@@ -1,24 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
 using EM.Domain;
 using EM.Domain.Utilitarios;
-using EM.Repository;
 using EM.Repository.Interfaces;
 using Em.Web.Models;
 using EM.Web.Utils;
 
 namespace EM.Web.Controllers
 {
-    public class AlunoController : Controller
+    public class AlunoController(IRepositorioAluno repositorioAluno, IRepositorioCidade repositorioCidade) : Controller
     {
-        private readonly IRepositorioAluno _repositorioAluno;
-        private readonly IRepositorioCidade _repositorioCidade;
-
-        public AlunoController(IRepositorioAluno repositorioAluno, IRepositorioCidade repositorioCidade)
-        {
-            _repositorioAluno = repositorioAluno;
-            _repositorioCidade = repositorioCidade;
-        }
-
+        private readonly IRepositorioAluno _repositorioAluno = repositorioAluno;
+        private readonly IRepositorioCidade _repositorioCidade = repositorioCidade;
 
         public IActionResult Index()
         {
@@ -121,18 +113,6 @@ namespace EM.Web.Controllers
         }
 
 
-        private IEnumerable<Aluno> BuscarPorCidades(string nomeCidade)
-        {
-            var cidades = _repositorioCidade.GetByNome(nomeCidade)?.ToList() ?? new List<Cidade>();
-            if (cidades.Count == 0) return Enumerable.Empty<Aluno>();
-
-            var alunos = new List<Aluno>();
-            foreach (var cidade in cidades)
-            {
-                alunos.AddRange(_repositorioAluno.GetByCidade(cidade.Codigo));
-            }
-            return alunos;
-        }
 
         private Aluno PreencherCidade(Aluno? aluno)
         {

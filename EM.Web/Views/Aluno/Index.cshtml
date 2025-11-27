@@ -161,6 +161,7 @@
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     Confirmar Exclusão
                 </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Tem certeza que deseja excluir o aluno <strong id="alunoNome"></strong>?</p>
@@ -186,11 +187,16 @@
 @section Scripts {
     <script>
         function confirmarExclusao(matricula, nome) {
+            var modalEl = document.getElementById('confirmDeleteModal');
             document.getElementById('alunoNome').textContent = nome;
             document.getElementById('deleteForm').setAttribute('action', '/Aluno/Delete/' + matricula);
-            var modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            if (modalEl.parentElement !== document.body) {
+                document.body.appendChild(modalEl);
+            }
+            var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         }
+
         function filtrarTabela() {
             var tipoBusca = document.getElementById('searchType').value;
             var termoBusca = document.getElementById('searchInput').value.toLowerCase();
@@ -217,34 +223,28 @@
             }
         }
 
-        function gerarRelatorio() {
-            const botao = event?.currentTarget || document.querySelector('button[onclick="gerarRelatorio()"]');
-            const htmlOriginal = botao ? botao.innerHTML : null;
-            try {
-                if (botao) {
-                    botao.disabled = true;
-                    botao.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Gerando...';
-                }
-
-                const tipoBusca = document.getElementById('searchType').value;
-                const valorBusca = document.getElementById('searchInput').value;
-                const params = new URLSearchParams({ searchType: tipoBusca, searchValue: valorBusca });
-                const url = `/Relatorio/AlunosPDF?${params.toString()}`;
-                window.open(url, '_blank');
-            } catch (erro) {
-                alert(`Falha inesperada ao emitir relatório: ${erro}`);
-            } finally {
-                if (botao && htmlOriginal) {
-                    botao.disabled = false;
-                    botao.innerHTML = htmlOriginal;
-                }
-            }
-        }
-
-        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+        document.getElementById('searchInput').addEventListener('keyup', function (e) {
             if (e.key === 'Enter') {
                 filtrarTabela();
             }
         });
+
+        function gerarRelatorio() {
+            var tipoBusca = document.getElementById('searchType').value;
+            var termoBusca = document.getElementById('searchInput').value.trim();
+            var params = new URLSearchParams();
+            if (tipoBusca) params.set('searchType', tipoBusca);
+            if (termoBusca) params.set('searchValue', termoBusca);
+            var url = '/Relatorio/AlunosPDF' + (params.toString() ? ('?' + params.toString()) : '');
+            window.open(url, '_blank');
+        }
+
+        setTimeout(function () {
+            document.querySelectorAll('.alert').forEach(function (el) {
+                el.style.transition = 'opacity 0.5s';
+                el.style.opacity = '0';
+                setTimeout(function () { el.remove(); }, 500);
+            });
+        }, 5000);
     </script>
 }

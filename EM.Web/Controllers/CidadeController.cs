@@ -7,16 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EM.Web.Controllers
 {
-    public class CidadeController : Controller
+    public class CidadeController(IRepositorioCidade repositorioCidade, IRepositorioAluno repositorioAluno) : Controller
     {
-        private readonly IRepositorioCidade _repositorioCidade;
-        private readonly IRepositorioAluno _repositorioAluno;
-
-        public CidadeController(IRepositorioCidade repositorioCidade, IRepositorioAluno repositorioAluno)
-        {
-            _repositorioCidade = repositorioCidade;
-            _repositorioAluno = repositorioAluno;
-        }
+        private readonly IRepositorioCidade _repositorioCidade = repositorioCidade;
+        private readonly IRepositorioAluno _repositorioAluno = repositorioAluno;
 
         public IActionResult Index()
         {

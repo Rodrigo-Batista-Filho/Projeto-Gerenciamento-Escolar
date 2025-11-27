@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using EM.Domain;
+using EM.Web.Utils;
 
 namespace Em.Web.Models
 {
@@ -36,17 +37,8 @@ namespace Em.Web.Models
             }
         }
 
-        public string CPFFormatado
-        {
-            get
-            {
-                var limpo = (CPF ?? string.Empty).Replace(".", "").Replace("-", "");
-                if (limpo.Length != 11) return CPF ?? string.Empty;
-                return $"{limpo.Substring(0, 3)}.{limpo.Substring(3, 3)}.{limpo.Substring(6, 3)}-{limpo.Substring(9, 2)}";
-            }
-        }
+        public string CPFFormatado => FormatadorCPF.Formatar(CPF ?? string.Empty);
 
         public string SexoDescricao => Sexo == EnumeradorSexo.Masculino ? "Masculino" : "Feminino";
     }
 }
-

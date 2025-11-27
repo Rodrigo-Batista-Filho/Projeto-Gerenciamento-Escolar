@@ -22,46 +22,38 @@ namespace EM.Web.Controllers
         [HttpGet]
         public IActionResult AlunosPDF(string? searchType, string? searchValue)
         {
-            try
+            IEnumerable<Aluno> alunos;
+
+            var tipoBusca = (searchType ?? string.Empty).ToLowerInvariant();
+            var valorBusca = (searchValue ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(tipoBusca) || string.IsNullOrWhiteSpace(valorBusca))
             {
-                IEnumerable<Aluno> alunos;
-
-                var tipoBusca = (searchType ?? string.Empty).ToLowerInvariant();
-                var valorBusca = (searchValue ?? string.Empty).Trim();
-
-                if (string.IsNullOrWhiteSpace(tipoBusca) || string.IsNullOrWhiteSpace(valorBusca))
-                {
-                    alunos = _repoAluno.GetAll();
-                }
-                else
-                {
-                    alunos = tipoBusca switch
-                    {
-                        "matricula" when int.TryParse(valorBusca, out var matricula) =>
-                            new[] { _repoAluno.GetByMatricula(matricula) }.Where(a => a != null).Cast<Aluno>(),
-                        "cpf" =>
-                            new[] { _repoAluno.GetByCPF(valorBusca) }.Where(a => a != null).Cast<Aluno>(),
-                        "sexo" when Enum.TryParse<EnumeradorSexo>(valorBusca, true, out var sexo) =>
-                            _repoAluno.GetBySexo(sexo),
-                        "cidade" =>
-                            BuscarPorCidades(valorBusca),
-                        _ => _repoAluno.GetByConteudoNoNome(valorBusca)
-                    };
-                }
-
-                alunos = (alunos ?? Enumerable.Empty<Aluno>())
-                    .Select(PreencherCidade);
-
-                var listaAlunos = alunos.ToList();
-                var bytes = _relatorioService.GerarRelatorioAlunosPDF(listaAlunos);
-                Response.Headers["Content-Disposition"] = "inline; filename=Relatorio_Alunos.pdf";
-                return File(bytes, "application/pdf");
+                alunos = _repoAluno.GetAll();
             }
-            catch (Exception ex)
+            else
             {
-
-                return StatusCode(500, $"Erro ao gerar relatório: {ex.Message}\nStack: {ex.StackTrace}");
+                alunos = tipoBusca switch
+                {
+                    "matricula" when int.TryParse(valorBusca, out var matricula) =>
+                        new[] { _repoAluno.GetByMatricula(matricula) }.Where(a => a != null).Cast<Aluno>(),
+                    "cpf" =>
+                        new[] { _repoAluno.GetByCPF(valorBusca) }.Where(a => a != null).Cast<Aluno>(),
+                    "sexo" when Enum.TryParse<EnumeradorSexo>(valorBusca, true, out var sexo) =>
+                        _repoAluno.GetBySexo(sexo),
+                    "cidade" =>
+                        BuscarPorCidades(valorBusca),
+                    _ => _repoAluno.GetByConteudoNoNome(valorBusca)
+                };
             }
+
+            alunos = (alunos ?? Enumerable.Empty<Aluno>())
+                .Select(PreencherCidade);
+
+            var listaAlunos = alunos.ToList();
+            var bytes = _relatorioService.GerarRelatorioAlunosPDF(listaAlunos);
+            Response.Headers["Content-Disposition"] = "inline; filename=Relatorio_Alunos.pdf";
+            return File(bytes, "application/pdf");
         }
 
         private IEnumerable<Aluno> BuscarPorCidades(string valorBusca)

@@ -8,33 +8,45 @@ namespace Em.Web.Models
     {
         public int Matricula { get; set; }
 
-        [Required(ErrorMessage = "Nome é obrigatório")]
-        [StringLength(100, MinimumLength = 3, ErrorMessage = "Nome deve ter entre 3 e 100 caracteres")]
+        [Required]
+        [StringLength(100, MinimumLength = 3)]
         public string Nome { get; set; } = string.Empty;
 
         public string CPF { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Data de nascimento é obrigatória")]
+        [Required]
         [DataType(DataType.Date)]
         public DateTime Nascimento { get; set; } = DateTime.Now.AddYears(-18);
 
-        [Required(ErrorMessage = "Sexo é obrigatório")]
+        [Required]
         public EnumeradorSexo Sexo { get; set; }
 
         public int? CidadeCodigo { get; set; }
-
         public string CidadeNome { get; set; } = string.Empty;
         public string UF { get; set; } = string.Empty;
 
+        public int Idade
+        {
+            get
+            {
+                var hoje = DateTime.Today;
+                var idade = hoje.Year - Nascimento.Year;
+                if (Nascimento.Date > hoje.AddYears(-idade)) idade--;
+                return idade;
+            }
+        }
 
-        public int Idade => DateTime.Now.Year - Nascimento.Year -
-                           (DateTime.Now.DayOfYear < Nascimento.DayOfYear ? 1 : 0);
-
-
-        public string CPFFormatado => !string.IsNullOrEmpty(CPF) && CPF.Length == 11
-            ? $"{CPF.Substring(0, 3)}.{CPF.Substring(3, 3)}.{CPF.Substring(6, 3)}-{CPF.Substring(9, 2)}"
-            : CPF;
+        public string CPFFormatado
+        {
+            get
+            {
+                var limpo = (CPF ?? string.Empty).Replace(".", "").Replace("-", "");
+                if (limpo.Length != 11) return CPF ?? string.Empty;
+                return $"{limpo.Substring(0, 3)}.{limpo.Substring(3, 3)}.{limpo.Substring(6, 3)}-{limpo.Substring(9, 2)}";
+            }
+        }
 
         public string SexoDescricao => Sexo == EnumeradorSexo.Masculino ? "Masculino" : "Feminino";
     }
 }
+

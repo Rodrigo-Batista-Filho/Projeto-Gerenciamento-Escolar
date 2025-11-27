@@ -2,16 +2,17 @@ using Em.Web.Models;
 using EM.Domain;
 using EM.Domain.Utilitarios;
 using EM.Repository;
+using EM.Repository.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EM.Web.Controllers
 {
     public class CidadeController : Controller
     {
-        private readonly RepositorioCidade _repositorioCidade;
-        private readonly RepositorioAluno _repositorioAluno;
+        private readonly IRepositorioCidade _repositorioCidade;
+        private readonly IRepositorioAluno _repositorioAluno;
 
-        public CidadeController(RepositorioCidade repositorioCidade, RepositorioAluno repositorioAluno)
+        public CidadeController(IRepositorioCidade repositorioCidade, IRepositorioAluno repositorioAluno)
         {
             _repositorioCidade = repositorioCidade;
             _repositorioAluno = repositorioAluno;
@@ -71,7 +72,7 @@ namespace EM.Web.Controllers
             }
 
             ViewBag.UFs = _repositorioCidade.GetUFs();
-            return View(model);
+            return View("Create", model);
         }
 
         public IActionResult Edit(int id)
@@ -110,7 +111,7 @@ namespace EM.Web.Controllers
                 {
                     ModelState.AddModelError("Nome", "Nome deve ter entre 3 e 100 caracteres");
                     ViewBag.UFs = _repositorioCidade.GetUFs();
-                    return View(model);
+                    return View("Create", model);
                 }
 
                 var cidade = new Cidade
@@ -135,7 +136,7 @@ namespace EM.Web.Controllers
             }
 
             ViewBag.UFs = _repositorioCidade.GetUFs();
-            return View(model);
+            return View("Create", model);
         }
 
 
@@ -164,29 +165,21 @@ namespace EM.Web.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Delete(int id)
         {
-            try
+            if (_repositorioCidade.CidadeTemAlunos(id))
             {
-
-                if (_repositorioCidade.CidadeTemAlunos(id))
-                {
-                    TempData["Error"] = "Não é possível excluir a cidade pois existem alunos vinculados a ela.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                var cidade = _repositorioCidade.GetByCodigo(id);
-                if (cidade != null)
-                {
-                    _repositorioCidade.Remove(cidade);
-                    TempData["Success"] = "Cidade excluída com sucesso!";
-                }
-                else
-                {
-                    TempData["Error"] = "Cidade não encontrada";
-                }
+                TempData["Error"] = "Não é possível excluir a cidade pois existem alunos vinculados a ela.";
+                return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+
+            var cidade = _repositorioCidade.GetByCodigo(id);
+            if (cidade != null)
             {
-                TempData["Error"] = $"Erro ao excluir cidade: {ex.Message}";
+                _repositorioCidade.Remove(cidade);
+                TempData["Success"] = "Cidade excluída com sucesso!";
+            }
+            else
+            {
+                TempData["Error"] = "Cidade não encontrada";
             }
 
             return RedirectToAction(nameof(Index));
@@ -198,32 +191,24 @@ namespace EM.Web.Controllers
             if (string.IsNullOrWhiteSpace(searchValue))
                 return RedirectToAction(nameof(Index));
 
-            try
+            var cidades = searchType?.ToLower() switch
             {
-                var cidades = searchType?.ToLower() switch
-                {
-                    "uf" => _repositorioCidade.GetByUF(searchValue.ToUpper()),
-                    _ => _repositorioCidade.GetByNome(searchValue)
-                };
+                "uf" => _repositorioCidade.GetByUF(searchValue.ToUpper()),
+                _ => _repositorioCidade.GetByNome(searchValue)
+            };
 
-                var model = cidades.Select(cidade => new CidadeModel
-                {
-                    Codigo = cidade.Codigo,
-                    Nome = cidade.Nome,
-                    UF = cidade.UF
-                }).ToList();
-
-                ViewBag.UFs = _repositorioCidade.GetUFs();
-                ViewBag.SearchType = searchType;
-                ViewBag.SearchValue = searchValue;
-
-                return View("Index", model);
-            }
-            catch (Exception ex)
+            var model = cidades.Select(cidade => new CidadeModel
             {
-                TempData["Error"] = $"Erro na pesquisa: {ex.Message}";
-                return RedirectToAction(nameof(Index));
-            }
+                Codigo = cidade.Codigo,
+                Nome = cidade.Nome,
+                UF = cidade.UF
+            }).ToList();
+
+            ViewBag.UFs = _repositorioCidade.GetUFs();
+            ViewBag.SearchType = searchType;
+            ViewBag.SearchValue = searchValue;
+
+            return View("Index", model);
         }
     }
 }

@@ -1,11 +1,13 @@
-﻿using System.Data;
+using System.Data;
 using EM.Domain;
 using EM.Domain.Utilitarios;
 using EM.Repository.Banco;
 
+using EM.Repository.Interfaces;
+
 namespace EM.Repository
 {
-    public class RepositorioAluno : RepositorioAbstrato<Aluno>
+    public class RepositorioAluno : RepositorioAbstrato<Aluno>, IRepositorioAluno
     {
         protected override string TableName => "TBALUNO";
         protected override string PrimaryKeyColumn => "ALUMATRICULA";
@@ -53,26 +55,26 @@ namespace EM.Repository
             return new Aluno
             {
                 Matricula = dataReader["ALUMATRICULA"].ToObject<int>(),
-                Nome = dataReader["ALUNOME"].ToObject<string>(),
-                CPF = dataReader["ALUCPF"].ToObject<string>(),
+                Nome = dataReader["ALUNOME"].ToObject<string>() ?? string.Empty,
+                CPF = dataReader["ALUCPF"].ToObject<string>() ?? string.Empty,
                 Nascimento = dataReader["ALUNASCIMENTO"].ToObject<DateTime>(),
                 Sexo = (EnumeradorSexo)dataReader["ALUSEXO"].ToObject<int>(),
                 CidadeCodigo = dataReader["ALUCODCIDADE"].ToObject<int?>()
             };
         }
 
-        public Aluno GetByMatricula(int matricula)
+        public Aluno? GetByMatricula(int matricula)
         {
             return GetById(matricula);
         }
 
         public IEnumerable<Aluno> GetByConteudoNoNome(string termoNome)
         {
-            var listaAlunos = new List<Aluno>();
+            List<Aluno> listaAlunos = [];
 
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = @"
                 SELECT A.*, C.CIDNOME, C.CIDUF 
@@ -83,10 +85,10 @@ namespace EM.Repository
 
             comando.CreateParameter("@Nome", termoNome);
 
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
             while (dataReader.Read())
             {
-                var aluno = MapFromReader(dataReader);
+                Aluno aluno = MapFromReader(dataReader);
                 aluno.CidadeNome = dataReader["CIDNOME"]?.ToObject<string>() ?? string.Empty;
                 aluno.UF = dataReader["CIDUF"]?.ToObject<string>() ?? string.Empty;
                 listaAlunos.Add(aluno);
@@ -97,14 +99,14 @@ namespace EM.Repository
 
         public Aluno? GetByCPF(string cpf)
         {
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = "SELECT * FROM TBALUNO WHERE ALUCPF = @CPF";
             comando.CreateParameter("@CPF", cpf);
 
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
             if (dataReader.Read())
             {
                 return MapFromReader(dataReader);
@@ -125,9 +127,9 @@ namespace EM.Repository
 
         public bool CPFExiste(string cpf, int? matriculaExcluir = null)
         {
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             if (matriculaExcluir.HasValue)
             {
@@ -141,7 +143,7 @@ namespace EM.Repository
 
             comando.CreateParameter("@CPF", cpf);
 
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
             return dataReader.Read();
         }
     }

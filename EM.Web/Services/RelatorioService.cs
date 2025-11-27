@@ -1,6 +1,7 @@
 using System.Linq;
 using EM.Domain;
 using EM.Web.Interfaces;
+using EM.Web.Utils;
 using iText.IO.Font.Constants;
 using iText.Kernel.Colors;
 using iText.Kernel.Font;
@@ -68,7 +69,7 @@ namespace EM.Web.Services
                 {
                     AddCell(tabelaAlunos, aluno.Matricula.ToString(), fontePadrao);
                     AddCell(tabelaAlunos, aluno.Nome ?? "—", fontePadrao);
-                    AddCell(tabelaAlunos, FormatarCpf(aluno.CPF), fontePadrao);
+                    AddCell(tabelaAlunos, FormatadorCPF.Formatar(aluno.CPF), fontePadrao);
                     var nascimentoTexto = (aluno.Nascimento == default ? "—" : aluno.Nascimento.ToString("dd/MM/yyyy"));
                     AddCell(tabelaAlunos, nascimentoTexto, fontePadrao);
                     AddCell(tabelaAlunos, aluno.Sexo.ToString(), fontePadrao);
@@ -93,7 +94,7 @@ namespace EM.Web.Services
                 document.Close();
                 return memoryStream.ToArray();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 using var erroStream = new MemoryStream();
                 var erroWriter = new PdfWriter(erroStream);
@@ -103,10 +104,8 @@ namespace EM.Web.Services
                 var fonteErro = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
                 erroDoc.Add(new Paragraph("Erro ao gerar relatório")
                     .SetFont(fonteErro).SetFontSize(16).SetTextAlignment(TextAlignment.CENTER));
-                erroDoc.Add(new Paragraph($"Mensagem: {ex.Message}")
+                erroDoc.Add(new Paragraph("Ocorreu um problema na geração do relatório. Tente novamente mais tarde.")
                     .SetFont(fonteErro).SetFontSize(12));
-                erroDoc.Add(new Paragraph($"Stack: {ex.StackTrace}")
-                    .SetFont(fonteErro).SetFontSize(8));
                 
                 erroDoc.Close();
                 return erroStream.ToArray();
@@ -131,10 +130,6 @@ namespace EM.Web.Services
                 .SetPadding(5));
         }
 
-        private string FormatarCpf(string? cpf)
-        {
-            if (string.IsNullOrWhiteSpace(cpf) || cpf.Length != 11) return "—";
-            return $"{cpf.Substring(0, 3)}.{cpf.Substring(3, 3)}.{cpf.Substring(6, 3)}-{cpf.Substring(9, 2)}";
-        }
+        
     }
 }

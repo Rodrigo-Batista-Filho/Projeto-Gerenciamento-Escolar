@@ -1,11 +1,12 @@
-﻿using System.Data;
+using System.Data;
 using System.Linq.Expressions;
 using EM.Domain.Interface;
+using EM.Repository.Interfaces;
 using EM.Repository.Banco;
 
 namespace EM.Repository
 {
-    public abstract class RepositorioAbstrato<T> where T : IEntidade
+    public abstract class RepositorioAbstrato<T> : IRepositorioBase<T> where T : IEntidade
     {
         protected abstract string TableName { get; }
         protected abstract string PrimaryKeyColumn { get; }
@@ -15,9 +16,9 @@ namespace EM.Repository
 
         public virtual void Add(T entidade)
         {
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = GetInsertCommand();
             AddInsertParameters(comando, entidade);
@@ -26,9 +27,9 @@ namespace EM.Repository
 
         public virtual void Remove(T entidade)
         {
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = $"DELETE FROM {TableName} WHERE {PrimaryKeyColumn} = @Id";
             AddDeleteParameters(comando, entidade);
@@ -37,9 +38,9 @@ namespace EM.Repository
 
         public virtual void Update(T entidade)
         {
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = GetUpdateCommand();
             AddUpdateParameters(comando, entidade);
@@ -48,14 +49,14 @@ namespace EM.Repository
 
         public virtual IEnumerable<T> GetAll()
         {
-            var listaEntidades = new List<T>();
+            List<T> listaEntidades = new List<T>();
 
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = $"SELECT * FROM {TableName}";
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
 
             while (dataReader.Read())
             {
@@ -70,42 +71,42 @@ namespace EM.Repository
             return GetAll().AsQueryable().Where(predicate);
         }
 
-        public virtual T GetById(int id)
+        public virtual T? GetById(int id)
         {
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = $"SELECT * FROM {TableName} WHERE {PrimaryKeyColumn} = @Id";
             comando.CreateParameter("@Id", id);
 
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
             if (dataReader.Read())
             {
                 return MapFromReader(dataReader);
             }
 
-            return default(T);
+            return default;
         }
 
         public virtual bool Exists(int id)
         {
-            using var cn = DBHelper.Instancia.CrieConexao();
+            using IDbConnection cn = DBHelper.Instancia.CrieConexao();
             cn.Open();
-            using var cmd = DBHelper.Instancia.CreateCommand(cn); // CORRIGIDO
+            using IDbCommand cmd = DBHelper.Instancia.CreateCommand(cn);
 
             cmd.CommandText = $"SELECT 1 FROM {TableName} WHERE {PrimaryKeyColumn} = @Id";
             cmd.CreateParameter("@Id", id);
 
-            using var reader = cmd.ExecuteReader();
+            using IDataReader reader = cmd.ExecuteReader();
             return reader.Read();
         }
 
         public virtual int Count()
         {
-            using var cn = DBHelper.Instancia.CrieConexao();
+            using IDbConnection cn = DBHelper.Instancia.CrieConexao();
             cn.Open();
-            using var cmd = DBHelper.Instancia.CreateCommand(cn); // CORRIGIDO
+            using IDbCommand cmd = DBHelper.Instancia.CreateCommand(cn);
 
             cmd.CommandText = $"SELECT COUNT(*) FROM {TableName}";
             return Convert.ToInt32(cmd.ExecuteScalar());

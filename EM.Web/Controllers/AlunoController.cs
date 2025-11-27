@@ -2,16 +2,18 @@ using Microsoft.AspNetCore.Mvc;
 using EM.Domain;
 using EM.Domain.Utilitarios;
 using EM.Repository;
+using EM.Repository.Interfaces;
 using Em.Web.Models;
+using EM.Web.Utils;
 
 namespace EM.Web.Controllers
 {
     public class AlunoController : Controller
     {
-        private readonly RepositorioAluno _repositorioAluno;
-        private readonly RepositorioCidade _repositorioCidade;
+        private readonly IRepositorioAluno _repositorioAluno;
+        private readonly IRepositorioCidade _repositorioCidade;
 
-        public AlunoController(RepositorioAluno repositorioAluno, RepositorioCidade repositorioCidade)
+        public AlunoController(IRepositorioAluno repositorioAluno, IRepositorioCidade repositorioCidade)
         {
             _repositorioAluno = repositorioAluno;
             _repositorioCidade = repositorioCidade;
@@ -26,7 +28,7 @@ namespace EM.Web.Controllers
                 {
                     Matricula = a.Matricula,
                     Nome = a.Nome,
-                    CPF = FormatarCPF(a.CPF),
+                    CPF = FormatadorCPF.Formatar(a.CPF),
                     Nascimento = a.Nascimento,
                     Sexo = a.Sexo,
                     CidadeCodigo = a.CidadeCodigo,
@@ -60,7 +62,7 @@ namespace EM.Web.Controllers
             {
                 if (!string.IsNullOrWhiteSpace(model.CPF))
                 {
-                    string cpfLimpo = LimparCPF(model.CPF);
+                    string cpfLimpo = FormatadorCPF.Limpar(model.CPF);
 
                     if (!cpfLimpo.All(char.IsDigit))
                     {
@@ -109,22 +111,13 @@ namespace EM.Web.Controllers
                     CidadeCodigo = model.CidadeCodigo
                 };
 
-                try
-                {
-                    _repositorioAluno.Add(aluno);
-                    TempData["Success"] = "Aluno cadastrado com sucesso!";
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", $"Erro ao cadastrar aluno: {ex.Message}");
-                    CarregarViewBags();
-                    return View(model);
-                }
+                _repositorioAluno.Add(aluno);
+                TempData["Success"] = "Aluno cadastrado com sucesso!";
+                return RedirectToAction(nameof(Index));
             }
 
             CarregarViewBags();
-            return View(model);
+            return View("Create", model);
         }
 
 
@@ -168,14 +161,14 @@ namespace EM.Web.Controllers
             {
                 Matricula = aluno.Matricula,
                 Nome = aluno.Nome,
-                CPF = FormatarCPF(aluno.CPF),
+                CPF = FormatadorCPF.Formatar(aluno.CPF),
                 Nascimento = aluno.Nascimento,
                 Sexo = aluno.Sexo,
                 CidadeCodigo = aluno.CidadeCodigo
             };
 
             CarregarViewBags();
-            return View(model);
+            return View("Create", model);
         }
 
 
@@ -193,7 +186,7 @@ namespace EM.Web.Controllers
             {
                 if (!string.IsNullOrWhiteSpace(model.CPF))
                 {
-                    string cpfLimpo = LimparCPF(model.CPF);
+                    string cpfLimpo = FormatadorCPF.Limpar(model.CPF);
 
                     if (!cpfLimpo.All(char.IsDigit))
                     {
@@ -243,18 +236,9 @@ namespace EM.Web.Controllers
                     CidadeCodigo = model.CidadeCodigo
                 };
 
-                try
-                {
-                    _repositorioAluno.Update(aluno);
-                    TempData["Success"] = "Aluno atualizado com sucesso!";
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", $"Erro ao atualizar aluno: {ex.Message}");
-                    CarregarViewBags();
-                    return View(model);
-                }
+                _repositorioAluno.Update(aluno);
+                TempData["Success"] = "Aluno atualizado com sucesso!";
+                return RedirectToAction(nameof(Index));
             }
 
             CarregarViewBags();
@@ -285,7 +269,7 @@ namespace EM.Web.Controllers
             {
                 Matricula = aluno.Matricula,
                 Nome = aluno.Nome,
-                CPF = FormatarCPF(aluno.CPF),
+                CPF = FormatadorCPF.Formatar(aluno.CPF),
                 Nascimento = aluno.Nascimento,
                 Sexo = aluno.Sexo,
                 CidadeCodigo = aluno.CidadeCodigo,
@@ -301,22 +285,15 @@ namespace EM.Web.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Delete(int id)
         {
-            try
+            var aluno = _repositorioAluno.GetByMatricula(id);
+            if (aluno != null)
             {
-                var aluno = _repositorioAluno.GetByMatricula(id);
-                if (aluno != null)
-                {
-                    _repositorioAluno.Remove(aluno);
-                    TempData["Success"] = "Aluno excluído com sucesso!";
-                }
-                else
-                {
-                    TempData["Error"] = "Aluno não encontrado";
-                }
+                _repositorioAluno.Remove(aluno);
+                TempData["Success"] = "Aluno excluído com sucesso!";
             }
-            catch (Exception ex)
+            else
             {
-                TempData["Error"] = $"Erro ao excluir aluno: {ex.Message}";
+                TempData["Error"] = "Aluno não encontrado";
             }
 
             return RedirectToAction(nameof(Index));
@@ -328,44 +305,36 @@ namespace EM.Web.Controllers
             if (string.IsNullOrWhiteSpace(searchValue))
                 return RedirectToAction(nameof(Index));
 
-            try
+            var alunos = searchType?.ToLower() switch
             {
-                var alunos = searchType?.ToLower() switch
+                "matricula" when int.TryParse(searchValue, out int matricula) =>
+                    new[] { _repositorioAluno.GetByMatricula(matricula) }.Where(a => a != null),
+                "cpf" =>
+                    new[] { _repositorioAluno.GetByCPF(FormatadorCPF.Limpar(searchValue)) }.Where(a => a != null),
+                "sexo" when Enum.TryParse<EnumeradorSexo>(searchValue, true, out var sexo) =>
+                    _repositorioAluno.GetBySexo(sexo),
+                _ => _repositorioAluno.GetByConteudoNoNome(searchValue)
+            };
+
+            var model = alunos
+                .Select(PreencherCidade)
+                .Select(a => new AlunoModel
                 {
-                    "matricula" when int.TryParse(searchValue, out int matricula) =>
-                        new[] { _repositorioAluno.GetByMatricula(matricula) }.Where(a => a != null),
-                    "cpf" =>
-                        new[] { _repositorioAluno.GetByCPF(LimparCPF(searchValue)) }.Where(a => a != null),
-                    "sexo" when Enum.TryParse<EnumeradorSexo>(searchValue, true, out var sexo) =>
-                        _repositorioAluno.GetBySexo(sexo),
-                    _ => _repositorioAluno.GetByConteudoNoNome(searchValue)
-                };
+                    Matricula = a.Matricula,
+                    Nome = a.Nome,
+                    CPF = FormatadorCPF.Formatar(a.CPF),
+                    Nascimento = a.Nascimento,
+                    Sexo = a.Sexo,
+                    CidadeCodigo = a.CidadeCodigo,
+                    CidadeNome = a.CidadeNome,
+                    UF = a.UF
+                }).ToList();
 
-                var model = alunos
-                    .Select(PreencherCidade)
-                    .Select(a => new AlunoModel
-                    {
-                        Matricula = a.Matricula,
-                        Nome = a.Nome,
-                        CPF = FormatarCPF(a.CPF),
-                        Nascimento = a.Nascimento,
-                        Sexo = a.Sexo,
-                        CidadeCodigo = a.CidadeCodigo,
-                        CidadeNome = a.CidadeNome,
-                        UF = a.UF
-                    }).ToList();
+            ViewBag.SearchTypes = new[] { "nome", "matricula", "cpf", "sexo" };
+            ViewBag.SearchType = searchType;
+            ViewBag.SearchValue = searchValue;
 
-                ViewBag.SearchTypes = new[] { "nome", "matricula", "cpf", "sexo" };
-                ViewBag.SearchType = searchType;
-                ViewBag.SearchValue = searchValue;
-
-                return View("Index", model);
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Erro na pesquisa: {ex.Message}";
-                return RedirectToAction(nameof(Index));
-            }
+            return View("Index", model);
         }
 
         private void CarregarViewBags()
@@ -378,25 +347,6 @@ namespace EM.Web.Controllers
                 .ToList();
         }
 
-        private string LimparCPF(string cpf)
-        {
-            if (string.IsNullOrWhiteSpace(cpf))
-                return string.Empty;
-
-            return cpf.Replace(".", "").Replace("-", "").Trim();
-        }
-
-        private string FormatarCPF(string cpf)
-        {
-            if (string.IsNullOrWhiteSpace(cpf))
-                return string.Empty;
-
-            string cpfLimpo = LimparCPF(cpf);
-
-            if (cpfLimpo.Length != 11)
-                return cpf;
-
-            return $"{cpfLimpo.Substring(0, 3)}.{cpfLimpo.Substring(3, 3)}.{cpfLimpo.Substring(6, 3)}-{cpfLimpo.Substring(9, 2)}";
-        }
+        
     }
 }

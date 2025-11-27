@@ -13,9 +13,10 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "applicationUrl": "http://localhost:5163",
+      "applicationUrl": "https://localhost:7164;http://localhost:7164",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HTTPS_PORT": "7164"
       }
     },
     "https": {

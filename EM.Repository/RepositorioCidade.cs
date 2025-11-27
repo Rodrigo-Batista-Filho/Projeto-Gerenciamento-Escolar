@@ -1,11 +1,13 @@
-﻿using System.Data;
+using System.Data;
 using EM.Domain;
 using EM.Domain.Utilitarios;
 using EM.Repository.Banco;
 
+using EM.Repository.Interfaces;
+
 namespace EM.Repository
 {
-    public class RepositorioCidade : RepositorioAbstrato<Cidade>
+    public class RepositorioCidade : RepositorioAbstrato<Cidade>, IRepositorioCidade
     {
         protected override string TableName => "TBCIDADE";
         protected override string PrimaryKeyColumn => "CIDCODIGO";
@@ -46,12 +48,12 @@ namespace EM.Repository
             return new Cidade
             {
                 Codigo = dataReader["CIDCODIGO"].ToObject<int>(),
-                Nome = dataReader["CIDNOME"].ToObject<string>(),
-                UF = dataReader["CIDUF"].ToObject<string>()
+                Nome = dataReader["CIDNOME"].ToObject<string>() ?? string.Empty,
+                UF = dataReader["CIDUF"].ToObject<string>() ?? string.Empty
             };
         }
 
-        public Cidade GetByCodigo(int codigo)
+        public Cidade? GetByCodigo(int codigo)
         {
             return GetById(codigo);
         }
@@ -63,16 +65,16 @@ namespace EM.Repository
 
         public IEnumerable<Cidade> GetByNome(string nome)
         {
-            var listaCidades = new List<Cidade>();
+            List<Cidade> listaCidades = [];
 
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = "SELECT * FROM TBCIDADE WHERE UPPER(CIDNOME) CONTAINING UPPER(@Nome) ORDER BY CIDNOME";
             comando.CreateParameter("@Nome", nome);
 
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
             while (dataReader.Read())
             {
                 listaCidades.Add(MapFromReader(dataReader));
@@ -83,18 +85,18 @@ namespace EM.Repository
 
         public IEnumerable<string> GetUFs()
         {
-            var listaUF = new List<string>();
+            List<string> listaUF = [];
 
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = "SELECT DISTINCT CIDUF FROM TBCIDADE ORDER BY CIDUF";
 
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
             while (dataReader.Read())
             {
-                listaUF.Add(dataReader["CIDUF"].ToObject<string>());
+                listaUF.Add(dataReader["CIDUF"].ToObject<string>() ?? string.Empty);
             }
 
             return listaUF;
@@ -102,14 +104,14 @@ namespace EM.Repository
 
         public bool CidadeTemAlunos(int codigoCidade)
         {
-            using var conexao = DBHelper.Instancia.CrieConexao();
+            using IDbConnection conexao = DBHelper.Instancia.CrieConexao();
             conexao.Open();
-            using var comando = DBHelper.Instancia.CreateCommand(conexao);
+            using IDbCommand comando = DBHelper.Instancia.CreateCommand(conexao);
 
             comando.CommandText = "SELECT 1 FROM TBALUNO WHERE ALUCODCIDADE = @CodigoCidade";
             comando.CreateParameter("@CodigoCidade", codigoCidade);
 
-            using var dataReader = comando.ExecuteReader();
+            using IDataReader dataReader = comando.ExecuteReader();
             return dataReader.Read();
         }
     }

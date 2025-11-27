@@ -27,7 +27,7 @@ namespace EM.Repository.Banco
 
             public static IDbCommand CreateCommand(IDbConnection connection)
             {
-                var comando = connection.CreateCommand();
+                IDbCommand comando = connection.CreateCommand();
                 comando.CommandType = CommandType.Text;
                 return comando;
             }

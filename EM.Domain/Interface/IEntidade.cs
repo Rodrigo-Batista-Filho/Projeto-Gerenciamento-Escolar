@@ -1,9 +1,4 @@
-﻿namespace EM.Domain.Interface
+namespace EM.Domain.Interface
 {
-    public interface IEntidade
-    {
-        int GetHashCode();
-        bool Equals(object obj);
-        string ToString();
-    }
+    public interface IEntidade {}
 }

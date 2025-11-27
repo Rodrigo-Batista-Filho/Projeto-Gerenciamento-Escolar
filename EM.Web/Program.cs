@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Localization;
 using EM.Web.Interfaces;
 using EM.Web.Services;
 using EM.Repository;
+using EM.Repository.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,8 +15,8 @@ Environment.SetEnvironmentVariable("ITEXT_BOUNCY_CASTLE_FACTORY_NAME", "bouncy-c
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddScoped<IRelatorioService, RelatorioService>();
-builder.Services.AddScoped<RepositorioAluno>();
-builder.Services.AddScoped<RepositorioCidade>();
+builder.Services.AddScoped<IRepositorioAluno, RepositorioAluno>();
+builder.Services.AddScoped<IRepositorioCidade, RepositorioCidade>();
 
 var cadeiaConexao = builder.Configuration.GetConnectionString("FirebirdConnection");
 if (string.IsNullOrWhiteSpace(cadeiaConexao))
